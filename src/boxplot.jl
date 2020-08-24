@@ -11,10 +11,14 @@ notch_width(q2, q4, N) = 1.58 * (q4-q2)/sqrt(N)
     z;
     notch = false,
     range = 1.5,
+    range_quantile = false,
     outliers = true,
     whisker_width = :match,
 )
     # if only y is provided, then x will be UnitRange 1:size(y,2)
+    if range_quantile
+        @assert range < 1 "whiskers set at quantile values must have range set to < 1"
+    end
     if typeof(x) <: AbstractRange
         if step(x) == first(x) == 1
             x = plotattributes[:series_plotindex]
@@ -56,13 +60,15 @@ notch_width(q2, q4, N) = 1.58 * (q4-q2)/sqrt(N)
 
         # internal nodes for notches
         L, R = center - 0.5 * hw, center + 0.5 * hw
-
+        
         # outliers
         if Float64(range) != 0.0  # if the range is 0.0, the whiskers will extend to the data
             limit = range * (q4 - q2)
+            limit_up = range_quantiles ? quantile(values, 1 - range) : q4 + limit
+            limit_down = range_quantiles ? quantile(values, range) : q2 - limit
             inside = Float64[]
             for value in values
-                if (value < (q2 - limit)) || (value > (q4 + limit))
+                if (value < (limit_down)) || (value > (limit_up))
                     if outliers
                         push!(outliers_y, value)
                         push!(outliers_x, center)
